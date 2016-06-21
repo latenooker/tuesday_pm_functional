@@ -56,7 +56,14 @@ bin_CHM <- function(file, probs) {
 
 
 chm <- bin_CHM(f_dir, perc)
-breaks <- unname(quantile(chm_raw, perc))
+
+# make vector of strings for reclass intervals
+breaks <- c(0,unname(quantile(chm_raw[chm_raw!=0], perc)))
+break_label <- c()
+for (i in 2:length(breaks)) {
+  break_label[i-1] <- paste(c(round(breaks[i-1], 3), round(breaks[i], 3)), collapse="-")
+}
+break_label
 
 pdf(file = "Plot_of_recl_CHM.pdf", width = 6, height = 5)
 par(xpd = F, mar = c(5.1, 4.1, 4.1, 4.5))
@@ -73,10 +80,35 @@ leg.y <- par()$usr[4] + 50 - abs(par()$usr[3] - par()$usr[4])/2
 
 # add the legend
 legend(leg.x, leg.y,
-       legend = c("Lowest", "Intermediate", "Highest"), fill = c("cyan", "orange", "red"))
+       legend = break_label[2:4], fill = c("cyan", "orange", "red"))
 
 dev.off()
 ```
+
+## Function to write pdf of histogram
+
+```{r export-hist}
+# write pdf with output from a given function
+make_pdf <- function(expr, filename, ..., verbose = TRUE) {
+    if (verbose) {
+        message("Creating: ", filename)
+    }
+    pdf(file = filename, ...)
+    on.exit(dev.off())
+    eval.parent(substitute(expr))}
+hist_pdf <- function(data, probs, filename, ...) {
+  pdf(file = filename, ...)
+  on.exit(dev.off())
+  data[data==0] <- NA
+  breaks <- unname(quantile(data, probs))
+  hist(data, main="Canopy heights at Teakettle site\n with bin cutoffs in red")
+  abline(v=breaks, col = "red")
+}
+
+
+```
+
+
 
 ## Save reclassified raster to GeoTIFF
 
@@ -87,6 +119,12 @@ writeRaster(chm, filename = "reclassified_CHM_TEAK.tif",
             options = "COMPRESS=LZW",
             overwrite = T,
             NAflag = -9999)
+
+
+# Save logfile
+sink(paste0(format(Sys.time(), "%Y-%m-%d_%H%M%S"), "_sessionInfo.txt"))
+sessionInfo()
+sink()
 
 ```
 
