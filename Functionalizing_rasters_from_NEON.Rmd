@@ -15,3 +15,48 @@ output: html_document
 1. PLOT - layer the classified raster on top of the hillshade, add a legend for each “class” - legends are super tricky to simplifying this process with a function would be good.  see: http://neon-workwithdata.github.io/neon-data-institute-2016/R/classify-by-threshold-R/  for my take on forcing a legend outside of the plot area using par settings. You may have other better forms of magic to make this work well. :)
 1. Export the plot figure to a pdf – publishable
 1. Export the classified raster as a geotiff with NaFlagg = -9999 to an outputs folder.
+
+
+## Import spatial libraries
+
+```{r get_lib}
+
+library(raster)
+library(rgdal)
+library(cowplot)
+
+```
+
+## Import canopy height model, exclude zero values, and reclassify
+
+```{r read-in-chm}
+f_dir <- "../NEONdata/D17-California/TEAK/2013/lidar/TEAK_lidarCHM.tif"
+temp_chm <- raster(f_dir)
+# plot density function with vertical lines indicating specified quantiles
+dens_w_breaks <- function(data, probs) {
+  data[data==0] <- NA
+  breaks <- unname(quantile(data, probs))
+  density(data)
+  abline(v=breaks)
+}
+# Try out function with breaks at quintiles
+perc_20 <- seq(0,1,by=0.2)
+dens_w_breaks(temp_chm, perc_20)
+
+
+# Read in file and reclassify by specified quantiles
+bin_CHM <- function(file, probs) {
+  chm <- raster(file)
+  chm[chm==0] <- NA
+  breaks <- unname(quantile(chm, probs))
+  chm <- cut(chm, breaks=breaks)
+  return(chm)
+}
+
+
+chm <- bin_CHM(f_dir, seq(0,1,length= 4))
+plot(chm, main="Canopy height model reclassified by elevation quantiles")
+```
+
+## Plot density
+
