@@ -31,19 +31,20 @@ library(cowplot)
 
 ```{r read-in-chm}
 f_dir <- "../NEONdata/D17-California/TEAK/2013/lidar/TEAK_lidarCHM.tif"
-temp_chm <- raster(f_dir)
+chm_raw <- raster(f_dir)
 # plot density function with vertical lines indicating specified quantiles
 dens_w_breaks <- function(data, probs) {
   data[data==0] <- NA
   breaks <- unname(quantile(data, probs))
-  density(data)
-  abline(v=breaks)
+  density(data, main="Canopy heights at Teakettle site\n with bin cutoffs in red")
+  abline(v=breaks, col = "red")
 }
-# Try out function with breaks at quintiles
-perc_20 <- seq(0,1,by=0.2)
-dens_w_breaks(temp_chm, perc_20)
-
-
+# Try out function with breaks at 0, 0.333, and 0.667
+perc <- seq(0,1,length=4)
+dens_w_breaks(chm_raw, perc)
+pdf(file = "TEAK_CHM_density_with_breaks.pdf", width = 6, height = 7)
+dens_w_breaks(chm_raw, perc)
+dev.off()
 # Read in file and reclassify by specified quantiles
 bin_CHM <- function(file, probs) {
   chm <- raster(file)
@@ -54,9 +55,39 @@ bin_CHM <- function(file, probs) {
 }
 
 
-chm <- bin_CHM(f_dir, seq(0,1,length= 4))
-plot(chm, main="Canopy height model reclassified by elevation quantiles")
+chm <- bin_CHM(f_dir, perc)
+breaks <- unname(quantile(chm_raw, perc))
+
+pdf(file = "Plot_of_recl_CHM.pdf", width = 6, height = 5)
+par(xpd = F, mar = c(5.1, 4.1, 4.1, 4.5))
+plot(chm, col = c("cyan", "orange", "red"), main = "Canopy height model reclassified by elevation quantiles", legend = F)
+
+# Enable plotting legend outside bounds
+par(xpd = T)
+
+# Legend x position
+leg.x <- par()$usr[2] + 20
+
+# Legend x position
+leg.y <- par()$usr[4] + 50 - abs(par()$usr[3] - par()$usr[4])/2
+
+# add the legend
+legend(leg.x, leg.y,
+       legend = c("Lowest", "Intermediate", "Highest"), fill = c("cyan", "orange", "red"))
+
+dev.off()
 ```
 
-## Plot density
+## Save reclassified raster to GeoTIFF
+
+```{r write-raster}
+
+writeRaster(chm, filename = "reclassified_CHM_TEAK.tif", 
+            format = "GTiff",
+            options = "COMPRESS=LZW",
+            overwrite = T,
+            NAflag = -9999)
+
+```
+
 
